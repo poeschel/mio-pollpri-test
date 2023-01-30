@@ -2,7 +2,7 @@ use mio::{Events, Poll, Interest, Token};
 use mio::net::TcpListener;
 use nix::sys::socket::{AddressFamily, connect, MsgFlags, send, socket, SockaddrIn, SockFlag, SockType};
 
-use std::io::IoSlice;
+use std::io::{IoSlice, Read};
 use std::str::FromStr;
 use std::thread;
 
@@ -38,9 +38,16 @@ fn main() {
     poll.registry().register(&mut stream, Token(1), Interest::READABLE).unwrap();
     loop {
         poll.poll(&mut events, None).unwrap();
+        let mut buf: [u8; 128] = [0; 128];
 
         for event in &events {
             dbg!(event);
+            if let Err(e) = stream.read(&mut buf) {
+                match e.kind() {
+                    std::io::ErrorKind::WouldBlock => continue,
+                    _ => break,
+                }
+            }
         }
     }
 }
